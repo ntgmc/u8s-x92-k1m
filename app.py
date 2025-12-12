@@ -3,12 +3,28 @@ import json
 import os
 import datetime
 import time
-from logic import WorkplaceOptimizer
+
+# ==========================================
+# 版本控制与导入
+# ==========================================
+APP_VERSION = "1.4.1"  # App 前端版本
+
+# 尝试从 logic 导入版本号，如果不存在则使用默认值
+try:
+    from logic import WorkplaceOptimizer
+    from logic import VERSION as LOGIC_VERSION
+except ImportError:
+    # 如果 logic.py 中没有定义 VERSION 变量
+    from logic import WorkplaceOptimizer
+
+    LOGIC_VERSION = "1.0.0"
+except Exception:
+    # 处理其他可能的导入错误
+    LOGIC_VERSION = "Unknown"
 
 # ==========================================
 # 0. 全局配置与样式优化
 # ==========================================
-version = "1.4.1"
 st.set_page_config(
     page_title="MAA基建排班生成器",
     layout="wide",
@@ -34,21 +50,21 @@ st.markdown("""
         visibility: hidden !important;
         pointer-events: none !important;
     }
-    
+
     /* 为防止版本变动，连父级也一起隐藏 */
     .stAppHeader .stToolbarActions .stToolbarActionButton {
         display: none !important;
         visibility: hidden !important;
         pointer-events: none !important;
     }
-    
+
     /* 某些版本中该按钮会有 data-testid：stToolbarActionButtonIcon */
     [data-testid="stToolbarActionButtonIcon"] {
         display: none !important;
         visibility: hidden !important;
         pointer-events: none !important;
     }
-    
+
     /* 完全移除容器占位空间 */
     .stAppHeader .stToolbarActions {
         gap: 0 !important;
@@ -73,11 +89,30 @@ if 'results' not in st.session_state:
 with st.sidebar:
     # st.image("https://web.hycdn.cn/arknights/official/assets/images/brand.png", width=100)  # 只是个示例Logo，可换
     st.title("MAA基建排班生成器")
+
+    # --- [新增] 版本显示区域 ---
+    st.markdown(f"""
+    <div style="
+        display: flex; 
+        justify-content: space-between; 
+        background-color: #f0f2f6;
+        padding: 8px 12px;
+        border-radius: 6px;
+        color: #555; 
+        font-size: 0.85rem;
+        font-family: monospace;
+        margin-bottom: 15px;
+    ">
+        <span>App: v{APP_VERSION}</span>
+        <span>Logic: v{LOGIC_VERSION}</span>
+    </div>
+    """, unsafe_allow_html=True)
+    # -------------------------
+
     st.markdown("---")
 
     st.subheader("📂 数据导入")
     base_efficiency_path = "internal"
-
 
     # 使用 Tab 切换导入方式，更简洁
     import_tab1, import_tab2 = st.tabs(["📋 剪贴板 (推荐)", "📁 文件上传"])
@@ -96,7 +131,7 @@ with st.sidebar:
         uploaded_ops = st.file_uploader("上传 operators.json", type="json")
 
     st.markdown("---")
-    st.caption(f"v{version} | Author: 一只摆烂的42")
+    st.caption(f"Author: 一只摆烂的42")
 
 # ==========================================
 # 2. 主界面：分步配置向导
@@ -104,11 +139,8 @@ with st.sidebar:
 
 st.markdown("## 🏭 基建排班控制台")
 
-# --- 新增代码 START ---
 # 在这里创建一个空的容器，用于稍后展示进度条
-# 把它放在最显眼的地方（标题下方）
 status_container = st.empty()
-# --- 新增代码 END ---
 
 st.markdown("根据您的干员练度与基建布局，生成理论最高效率的排班方案...")
 
