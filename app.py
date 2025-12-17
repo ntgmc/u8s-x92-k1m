@@ -7,7 +7,7 @@ import time
 # ==========================================
 # 版本控制与导入
 # ==========================================
-APP_VERSION = "1.4.1"  # App 前端版本
+APP_VERSION = "1.4.2"  # App 前端版本
 
 # 尝试从 logic 导入版本号，如果不存在则使用默认值
 try:
@@ -137,7 +137,7 @@ with st.sidebar:
             except:
                 count_info = "文本已导入 (未解析)"
 
-            st.success(f"✅ JSON 已就绪\n\n{count_info}", icon="✅")
+            st.success(f"✅ JSON 已就绪\n\n{count_info}")
 
 
             # 清除按钮的回调
@@ -145,7 +145,6 @@ with st.sidebar:
                 st.session_state.pasted_json_data = ""
 
 
-            col_btn, col_info = st.columns([1, 1])
             with col_btn:
                 st.button("🗑️ 清除重置", on_click=clear_paste, key="btn_clear_json", use_container_width=True)
 
