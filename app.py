@@ -139,14 +139,11 @@ with st.sidebar:
 
             st.success(f"✅ JSON 已就绪\n\n{count_info}")
 
-
             # 清除按钮的回调
             def clear_paste():
                 st.session_state.pasted_json_data = ""
 
-
-            with col_btn:
-                st.button("🗑️ 清除重置", on_click=clear_paste, key="btn_clear_json", use_container_width=True)
+            st.button("🗑️ 清除重置", on_click=clear_paste, key="btn_clear_json", use_container_width=True)
 
             # 提供折叠的查看入口，防止占地
             with st.expander("🔍 查看原始数据"):
