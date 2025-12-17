@@ -118,14 +118,58 @@ with st.sidebar:
     import_tab1, import_tab2 = st.tabs(["📋 剪贴板 (推荐)", "📁 文件上传"])
 
     with import_tab1:
-        pasted_ops = st.text_area(
-            "粘贴 MAA 导出的 JSON",
-            height=300,
-            help="在 MAA '小工具' -> '干员识别' -> 识别后点击 '复制到剪贴板'，然后在此处 Ctrl+V粘贴",
-            placeholder='[\n  {\n    "id": "char_002_amiya",\n    "name": "阿米娅",\n    ...\n  }\n]'
-        )
-        if pasted_ops:
-            st.success("已检测到文本数据")
+
+        # 1. 确保 session_state 中有存储 key
+        if "pasted_json_data" not in st.session_state:
+            st.session_state.pasted_json_data = ""
+
+        # 2. 检查是否有数据
+        has_data = len(st.session_state.pasted_json_data.strip()) > 0
+
+        if has_data:
+            # === 状态 A: 已有数据 (显示精简卡片) ===
+            import json
+
+            # 尝试做简单的解析以获取更友好的反馈 (可选)
+            try:
+                data_preview = json.loads(st.session_state.pasted_json_data)
+                count_info = f"包含 {len(data_preview)} 名干员" if isinstance(data_preview, list) else "格式有效"
+            except:
+                count_info = "文本已导入 (未解析)"
+
+            st.success(f"✅ JSON 已就绪\n\n{count_info}", icon="✅")
+
+
+            # 清除按钮的回调
+            def clear_paste():
+                st.session_state.pasted_json_data = ""
+
+
+            col_btn, col_info = st.columns([1, 1])
+            with col_btn:
+                st.button("🗑️ 清除重置", on_click=clear_paste, key="btn_clear_json", use_container_width=True)
+
+            # 提供折叠的查看入口，防止占地
+            with st.expander("🔍 查看原始数据"):
+                st.code(st.session_state.pasted_json_data, language="json")
+
+            # 赋值给下游变量
+            pasted_ops = st.session_state.pasted_json_data
+
+        else:
+            # === 状态 B: 等待输入 (显示输入框) ===
+            # 使用 expander 包裹提示，或者直接显示输入框但更紧凑
+            st.info("请粘贴 MAA 导出的 JSON")
+
+            # 这里的 key="pasted_json_data" 会自动双向绑定 session_state
+            pasted_ops = st.text_area(
+                label="JSON Input",
+                height=250,
+                placeholder='[\n  {\n    "id": "char_002_amiya",\n    "name": "阿米娅",\n    ...\n  }\n]',
+                help="获取方式：MAA '小工具' -> '干员识别' -> 识别结束后点击 '复制到剪贴板'",
+                label_visibility="collapsed",
+                key="pasted_json_data"
+            )
 
     with import_tab2:
         uploaded_ops = st.file_uploader("上传 operators.json", type="json")
