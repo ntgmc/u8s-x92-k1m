@@ -7,7 +7,7 @@ import time
 # ==========================================
 # 版本控制与导入
 # ==========================================
-APP_VERSION = "1.4.2"  # App 前端版本
+APP_VERSION = "1.4.3"  # App 前端版本
 
 # 尝试从 logic 导入版本号，如果不存在则使用默认值
 try:
@@ -272,21 +272,54 @@ with st.container(border=True):
     # 贸易站策略
     with col_prod1:
         st.markdown("#### 💰 贸易站订单")
+
         if n_trading > 0:
-            # 滑块逻辑：使用上方计算出的 p_lmd 作为 value
-            # 注意：key的设置可以帮助Streamlit在预设切换时强制刷新组件
-            req_lmd = st.slider(
-                "龙门币 (LMD) 占比",
-                0, n_trading,
-                value=p_lmd,
-                help="剩下的将分配给合成玉"
+            # --- [修改开始] TODO 2: 重构交互为 Radio Group ---
+
+            # 1. 动态生成选项列表
+            # 格式：{数量}币 · {数量}玉
+            # 顺序：从“全龙门币”到“全合成玉”
+            radio_options = []
+            for i in range(n_trading, -1, -1):
+                lmd_count = i
+                orundum_count = n_trading - i
+                radio_options.append(f"{lmd_count}币 · {orundum_count}玉")
+
+            # 2. 计算默认选中项的索引
+            # p_lmd 是从 Section 1 传来的预设推荐值
+            # 例如：n=2, p_lmd=2 (全币), 选项列表是 ["2币0玉", "1币1玉", "0币2玉"]
+            # 此时 p_lmd 对应的索引就是 0
+            # 公式推导：索引 = 总数 - 龙门币数量
+            default_index = n_trading - p_lmd
+
+            # 边界保护：防止索引越界 (虽然 p_lmd 已经在 Section 1 做过 min 修正)
+            if default_index < 0 or default_index >= len(radio_options):
+                default_index = 0
+
+            # 3. 渲染组件
+            selected_label = st.radio(
+                "贸易站策略选择",
+                options=radio_options,
+                index=default_index,
+                horizontal=True,  # 横向排列，类似分段控制器
+                label_visibility="collapsed",  # 标题已经在上方 markdown 显示了，这里隐藏
+                help="选择龙门币(LMD)与合成玉(Orundum)的分配比例"
             )
+
+            # 4. 反向解析选择结果
+            # 提取字符串中的第一个数字作为龙门币数量
+            # 例如 "2币 · 0玉" -> 取 "2"
+            req_lmd = int(selected_label.split("币")[0])
             req_orundum = n_trading - req_lmd
 
-            st.info(f"分配: {req_lmd} 龙门币 + {req_orundum} 合成玉")
+            # (可选) 下方的 st.info 如果觉得多余可以注释掉，或者保留作为确认
+            # st.info(f"当前分配: {req_lmd} 龙门币 + {req_orundum} 合成玉")
+
+            # --- [修改结束] ---
+
         else:
             req_lmd, req_orundum = 0, 0
-            st.write("无贸易站")
+            st.caption("🚫 当前布局无贸易站")
 
     # 制造站策略
     with col_prod2:
