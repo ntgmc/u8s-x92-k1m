@@ -7,7 +7,7 @@ import time
 # ==========================================
 # 版本控制与导入
 # ==========================================
-APP_VERSION = "1.4.3"  # App 前端版本
+APP_VERSION = "1.4.5"  # App 前端版本
 
 # 尝试从 logic 导入版本号，如果不存在则使用默认值
 try:
@@ -252,13 +252,34 @@ with st.container(border=True):
         if layout_preset == "自定义":
             p_lmd = min(p_lmd, n_trading)
 
-        # 实时计算发电站并校验
-        n_power = 9 - n_trading - n_manufacture
-        if n_power != 3:
-            st.warning(f"当前为 {n_power} 发电站布局。算法目前仅针对 3 发电站优化，暂不支持其他布局。",
-                       icon="⚠️")
-        else:
-            st.caption(f"当前布局: {n_trading}贸易 - {n_manufacture}制造 - {n_power}发电")
+            # 1. 计算发电站数量
+            n_power = 9 - n_trading - n_manufacture
+
+            # 2. 定义样式模板 (使用方舟色系)
+            badge_style = """
+                    <div style="display: flex; gap: 10px; margin-top: 10px; align-items: center;">
+                        <span style="color: #666; font-size: 0.9rem; font-weight: bold; margin-right: 5px;">当前布局确认:</span>
+                        <div style="background-color: #2196F3; color: white; padding: 2px 12px; border-radius: 15px; font-weight: bold; font-size: 0.85rem;">
+                            🔵 {t} 贸易
+                        </div>
+                        <div style="background-color: #FFC107; color: #333; padding: 2px 12px; border-radius: 15px; font-weight: bold; font-size: 0.85rem;">
+                            🟡 {m} 制造
+                        </div>
+                        <div style="background-color: #4CAF50; color: white; padding: 2px 12px; border-radius: 15px; font-weight: bold; font-size: 0.85rem;">
+                            🟢 {p} 发电
+                        </div>
+                    </div>
+                """
+
+            # 3. 校验与渲染
+            if n_power != 3:
+                st.warning(f"当前为 {n_power} 发电站布局。算法目前仅针对 3 发电站优化，暂不支持其他布局。", icon="⚠️")
+            else:
+                # 渲染显眼的徽章状态栏
+                st.markdown(
+                    badge_style.format(t=n_trading, m=n_manufacture, p=n_power),
+                    unsafe_allow_html=True
+                )
 
 # ==========================================
 # --- 板块 2: 产物策略 (Strategy) ---
@@ -274,7 +295,6 @@ with st.container(border=True):
         st.markdown("#### 💰 贸易站订单")
 
         if n_trading > 0:
-            # --- [修改开始] TODO 2: 重构交互为 Radio Group ---
 
             # 1. 动态生成选项列表
             # 格式：{数量}币 · {数量}玉
@@ -312,8 +332,7 @@ with st.container(border=True):
             req_lmd = int(selected_label.split("币")[0])
             req_orundum = n_trading - req_lmd
 
-            # (可选) 下方的 st.info 如果觉得多余可以注释掉，或者保留作为确认
-            # st.info(f"当前分配: {req_lmd} 龙门币 + {req_orundum} 合成玉")
+            st.success(f"分配确认: {req_lmd} 龙门币 / {req_orundum} 合成玉", icon="✅")
 
             # --- [修改结束] ---
 
@@ -332,10 +351,16 @@ with st.container(border=True):
         req_shard = m3.number_input("源石碎片", 0, n_manufacture, value=p_shard)
 
         current_m_total = req_gold + req_record + req_shard
+
         if current_m_total != n_manufacture:
-            st.error(f"分配错误: 已分配 {current_m_total} / {n_manufacture} 间设施", icon="🚫")
+            # 计算差值，提示用户还需要分配多少，或者多分配了多少
+            diff = n_manufacture - current_m_total
+            msg = f"还有 {diff} 间未分配" if diff > 0 else f"超额分配 {abs(diff)} 间"
+
+            st.error(f"需分配 {n_manufacture} 间，当前 {current_m_total} 间 ({msg})", icon="🚫")
         else:
-            st.success(f"产线分配完成", icon="✅")
+            # 同样使用标准绿色 Success，文案对齐
+            st.success(f"分配确认: {req_gold}赤金 / {req_record}经验 / {req_shard}碎片", icon="✅")
 
 # --- 板块 3: 自动化科技 (Advanced) ---
 with st.expander("⚙️ 高级设置 (菲亚梅塔 / 无人机)", expanded=False):
