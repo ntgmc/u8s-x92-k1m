@@ -414,28 +414,46 @@ current_config = {
     "drones": {"enable": enable_drone, "order": drone_order, "targets": drone_targets}
 }
 
-# 校验逻辑
+# 校验逻辑：重新从 session_state 获取文本数据，确保万无一失
+raw_text_data = st.session_state.get("pasted_json_data", "")
+is_text_ready = len(raw_text_data.strip()) > 0
+is_file_ready = uploaded_ops is not None
+
+# 按钮激活条件
 is_config_valid = (current_m_total == n_manufacture) and ((req_lmd + req_orundum) == n_trading)
-is_data_ready = (pasted_ops is not None and pasted_ops.strip() != "") or (uploaded_ops is not None)
+is_data_ready = is_text_ready or is_file_ready
 
 if col_action.button("🚀 生成排班方案", type="primary", use_container_width=True,
                      disabled=not (is_config_valid and is_data_ready)):
 
-    # 准备数据源
+    # ========================================================
+    # 🛡️ [修复核心] 更稳健的数据源读取逻辑
+    # ========================================================
     operators_bytes = None
-    if uploaded_ops:
+
+    # 优先级 1: 文件上传
+    if uploaded_ops is not None:
         operators_bytes = uploaded_ops.getvalue()
-    elif pasted_ops:
+
+    # 优先级 2: 粘贴板文本 (直接读 Session State，不依赖局部变量)
+    elif len(raw_text_data.strip()) > 0:
         try:
-            json.loads(pasted_ops)  # 简单校验
-            operators_bytes = pasted_ops.encode('utf-8')
-        except:
-            st.toast("❌ 粘贴的 JSON 格式无效", icon="🚫")
-            st.stop()
+            # 再次验证 JSON 格式
+            json.loads(raw_text_data)
+            operators_bytes = raw_text_data.encode('utf-8')
+        except json.JSONDecodeError:
+            st.toast("❌ 粘贴的 JSON 格式无效，无法解析", icon="🚫")
+            st.stop()  # 停止执行
+
+    # 🛡️ 最后防线：防止 None 写入文件导致崩溃
+    if operators_bytes is None:
+        st.error("❌ 数据源读取失败：请确保已上传文件或粘贴了有效的 JSON 内容。", icon="🚫")
+        st.stop()
+
+    # ========================================================
 
     # --- 核心修改：指定在顶部的容器中渲染 ---
     with status_container:
-        # 这里的代码和之前一样，但现在它会出现在页面顶部！
         with st.status("正在启动神经模拟环境...", expanded=True) as status:
             # 初始化进度条
             progress_bar = st.progress(0)
@@ -443,8 +461,9 @@ if col_action.button("🚀 生成排班方案", type="primary", use_container_wi
             try:
                 # --- 阶段 1: 数据加载 (10%) ---
                 st.write("📥 读取干员练度数据...")
-                time.sleep(0.3)  # 模拟I/O延迟
+                time.sleep(0.3)
 
+                # 写入临时文件 (此时 operators_bytes 一定不为 None)
                 with open("temp_ops.json", "wb") as f:
                     f.write(operators_bytes)
 
@@ -469,7 +488,7 @@ if col_action.button("🚀 生成排班方案", type="primary", use_container_wi
 
                 # --- 阶段 4: 计算当前最优解 (65%) ---
                 st.write("📊 正在演算当前练度最优解 (Monte Carlo / Greedy)...")
-                time.sleep(0.8)  # 模拟复杂计算
+                time.sleep(0.8)
                 curr = optimizer.get_optimal_assignments(ignore_elite=False)
 
                 progress_bar.progress(65)
@@ -509,7 +528,7 @@ if col_action.button("🚀 生成排班方案", type="primary", use_container_wi
                             txt += f"   - 当前: 精{item['current']} -> 目标: 精{item['target']}\n"
                         txt += "-" * 30 + "\n"
 
-                time.sleep(0.4)  # 给人一种正在“生成文件”的感觉
+                time.sleep(0.4)
                 progress_bar.progress(95)
 
                 # 保存到 Session State
@@ -527,17 +546,13 @@ if col_action.button("🚀 生成排班方案", type="primary", use_container_wi
 
                 # --- 完成 (100%) ---
                 progress_bar.progress(100)
-                time.sleep(0.2)  # 稍微停顿一下让用户看到100%
+                time.sleep(0.2)
                 status.update(label="✅ 神经模拟完成！方案已生成", state="complete", expanded=False)
-
-                # 可选：给用户看1秒完成状态，然后清空顶部区域，
-                # 这样用户的注意力会自然转移到下方出现的“结果仪表盘”
-                # time.sleep(1.5)
-                # status_container.empty()
 
             except Exception as e:
                 status.update(label="❌ 计算过程中断", state="error")
                 st.error(f"错误详情: {str(e)}")
+                # 打印详细堆栈以便调试
                 import traceback
 
                 st.code(traceback.format_exc())
