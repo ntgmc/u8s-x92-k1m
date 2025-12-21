@@ -118,54 +118,69 @@ with st.sidebar:
     import_tab1, import_tab2 = st.tabs(["📋 剪贴板 (推荐)", "📁 文件上传"])
 
     with import_tab1:
+        # ========================================================
+        # 🛠️ [修复] 数据持久化逻辑
+        # ========================================================
 
-        # 1. 确保 session_state 中有存储 key
+        # 1. 确保永久存储变量存在 (这个变量不绑定到具体组件，所以不会被自动清除)
         if "pasted_json_data" not in st.session_state:
             st.session_state.pasted_json_data = ""
 
-        # 2. 检查是否有数据
-        has_data = len(st.session_state.pasted_json_data.strip()) > 0
+
+        # 2. 定义回调函数：当输入框内容变化时，立刻同步到永久变量
+        def sync_input_to_store():
+            # 将 临时组件(_widget_input) 的值 复制给 永久变量(pasted_json_data)
+            st.session_state.pasted_json_data = st.session_state._widget_input
+
+
+        # 3. 定义清除函数
+        def clear_paste():
+            st.session_state.pasted_json_data = ""
+
+
+        # 4. 判断逻辑：检查永久变量里有没有数据
+        current_data = st.session_state.pasted_json_data
+        has_data = len(current_data.strip()) > 0
 
         if has_data:
-            # === 状态 A: 已有数据 (显示精简卡片) ===
+            # === 状态 A: 已有数据 (组件被隐藏，但数据在 pasted_json_data 中安全存储) ===
             import json
 
-            # 尝试做简单的解析以获取更友好的反馈 (可选)
             try:
-                data_preview = json.loads(st.session_state.pasted_json_data)
+                data_preview = json.loads(current_data)
                 count_info = f"包含 {len(data_preview)} 名干员" if isinstance(data_preview, list) else "格式有效"
             except:
                 count_info = "文本已导入 (未解析)"
 
             st.success(f"✅ JSON 已就绪\n\n{count_info}")
 
-            # 清除按钮的回调
-            def clear_paste():
-                st.session_state.pasted_json_data = ""
-
+            # 清除按钮
             st.button("🗑️ 清除重置", on_click=clear_paste, key="btn_clear_json", use_container_width=True)
 
-            # 提供折叠的查看入口，防止占地
             with st.expander("🔍 查看原始数据"):
-                st.code(st.session_state.pasted_json_data, language="json")
+                st.code(current_data, language="json")
 
             # 赋值给下游变量
-            pasted_ops = st.session_state.pasted_json_data
+            pasted_ops = current_data
 
         else:
-            # === 状态 B: 等待输入 (显示输入框) ===
-            # 使用 expander 包裹提示，或者直接显示输入框但更紧凑
+            # === 状态 B: 等待输入 ===
             st.info("请粘贴 MAA 导出的 JSON")
 
-            # 这里的 key="pasted_json_data" 会自动双向绑定 session_state
-            pasted_ops = st.text_area(
+            # 注意：这里我们改用了 key="_widget_input" (临时Key)
+            # 并添加 on_change=sync_input_to_store，一旦输入，立刻存入永久变量
+            st.text_area(
                 label="JSON Input",
                 height=250,
                 placeholder='[\n  {\n    "id": "char_002_amiya",\n    "name": "阿米娅",\n    ...\n  }\n]',
                 help="获取方式：MAA '小工具' -> '干员识别' -> 识别结束后点击 '复制到剪贴板'",
                 label_visibility="collapsed",
-                key="pasted_json_data"
+                key="_widget_input",  # <--- 临时 Key，仅用于组件显示
+                on_change=sync_input_to_store  # <--- 关键：变动时同步
             )
+
+            # 此时还没数据
+            pasted_ops = ""
 
     with import_tab2:
         uploaded_ops = st.file_uploader("上传 operators.json", type="json")
