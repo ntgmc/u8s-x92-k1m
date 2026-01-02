@@ -382,7 +382,7 @@ with st.expander("⚙️ 高级设置 (菲亚梅塔 / 无人机)", expanded=Fals
 
     with col_adv1:
         st.markdown("##### 🔥 菲亚梅塔体系")
-        enable_fia = st.toggle("启用自动充能", value=False, help="自动识别排班中收益最高的干员进行心情恢复")
+        enable_fia = st.toggle("启用自动充能", value=True, help="自动识别排班中收益最高的干员进行心情恢复")
         if enable_fia:
             st.warning(
                 "**重要提示**：\n\n"
