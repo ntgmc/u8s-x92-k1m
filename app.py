@@ -2,12 +2,13 @@ import streamlit as st
 import json
 import os
 import datetime
+import pytz
 import time
 
 # ==========================================
 # 版本控制与导入
 # ==========================================
-APP_VERSION = "1.4.6"  # App 前端版本
+APP_VERSION = "1.4.7"  # App 前端版本
 
 # 尝试从 logic 导入版本号，如果不存在则使用默认值
 try:
@@ -74,7 +75,11 @@ st.markdown("""
 
 
 def get_timestamp():
-    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    # 设置时区为北京时间
+    beijing_tz = pytz.timezone('Asia/Shanghai')
+    # 获取当前北京时间
+    beijing_time = datetime.datetime.now(beijing_tz)
+    return beijing_time.strftime('%Y-%m-%d %H:%M:%S')
 
 
 # 状态初始化
@@ -595,19 +600,19 @@ if st.session_state.calculated:
         with st.container(border=True):
             st.markdown("**📄 当前方案**")
             st.caption("基于您现有的干员练度")
-            st.download_button("下载 JSON", res['curr'], "current.json", "application/json", use_container_width=True)
+            st.download_button("下载 JSON", res['curr'], "当前方案.json", "application/json", use_container_width=True)
 
     with d2:
         with st.container(border=True):
             st.markdown("**🔮 极限方案**")
             st.caption("忽略练度限制的理论最优")
-            st.download_button("下载 JSON", res['pot'], "potential.json", "application/json", use_container_width=True)
+            st.download_button("下载 JSON", res['pot'], "潜在方案-仅供参考.json", "application/json", use_container_width=True)
 
     with d3:
         with st.container(border=True):
             st.markdown("**📈 提升建议**")
             st.caption("性价比最高的练度提升路径")
-            st.download_button("下载 报告", res['txt'], "suggestions.txt", "text/plain", use_container_width=True)
+            st.download_button("下载 报告", res['txt'], "提升建议.txt", "text/plain", use_container_width=True)
 
     # 底部指南
     st.info("""
