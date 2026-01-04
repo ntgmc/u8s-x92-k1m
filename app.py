@@ -92,7 +92,6 @@ if 'results' not in st.session_state:
 # 1. 侧边栏：数据源 (Source of Truth)
 # ==========================================
 with st.sidebar:
-    # st.image("https://web.hycdn.cn/arknights/official/assets/images/brand.png", width=100)  # 只是个示例Logo，可换
     st.markdown("### 🤖 控制面板")
 
     # --- [新增] 版本显示区域 ---
