@@ -523,29 +523,11 @@ if col_action.button("🚀 生成排班方案", type="primary", use_container_wi
                 st.write("📈 生成练度提升路径分析报告...")
                 upgrades = optimizer.calculate_upgrade_requirements(curr, pot)
 
-
                 # 结果处理逻辑
                 def clean(d):
                     return {k: v for k, v in d.items() if k != 'raw_results'}
 
-
-                # 生成 TXT 内容
-                txt = "=== 基建提升建议 ===\n"
-                txt += f"生成时间: {get_timestamp()}\n{'=' * 40}\n\n"
-                if not upgrades:
-                    txt += "✅ 完美！您的队伍已达到当前配置的理论极限效率。\n"
-                else:
-                    for item in upgrades:
-                        g = item['gain']
-                        g_str = f"{g * 100:.1f}%" if g < 0.9 else f"{g:.1f}%"
-                        if item.get('type') == 'bundle':
-                            names = "+".join([o['name'] for o in item['ops']])
-                            txt += f"[组合] {names}\n   收益: {item['rooms']} 效率 +{g_str}\n"
-                            for o in item['ops']: txt += f"   - {o['name']}: 精{o['current']} -> 精{o['target']}\n"
-                        else:
-                            txt += f"[单人] {item['name']}\n   收益: {item['rooms']} 效率 +{g_str}\n"
-                            txt += f"   - 当前: 精{item['current']} -> 目标: 精{item['target']}\n"
-                        txt += "-" * 30 + "\n"
+                txt = optimizer.get_suggestions_text(upgrades)
 
                 time.sleep(0.4)
                 progress_bar.progress(95)
